@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAudioPlayer } from "../../context/AudioPlayerContext";
 
 export default function BhajansPage() {
   const [trackList, setTrackList] = useState([]);
-  const [currentTrack, setCurrentTrack] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
-  const audioRef = useRef(null);
+
+  // Consume global audio context
+  const { currentTrack, isPlaying, playTrack, togglePlayPause } = useAudioPlayer();
 
   useEffect(() => {
     async function loadBhajans() {
@@ -20,28 +21,18 @@ export default function BhajansPage() {
 
       if (!error && data && data.length > 0) {
         setTrackList(data);
-        setCurrentTrack(data[0]);
       }
       setLoading(false);
     }
     loadBhajans();
   }, []);
 
-  const togglePlay = (track) => {
+  const handleTrackClick = (track) => {
     if (currentTrack?.id === track.id) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
+      togglePlayPause();
     } else {
-      setCurrentTrack(track);
-      setIsPlaying(true);
-      setTimeout(() => {
-        if (audioRef.current) audioRef.current.play();
-      }, 50);
+      // Pass the selected track and full trackList as the auto-play queue
+      playTrack(track, trackList);
     }
   };
 
@@ -56,7 +47,7 @@ export default function BhajansPage() {
         </p>
       </header>
 
-      {/* Persistent Audio Player */}
+      {/* Persistent Audio Hero Banner */}
       {currentTrack ? (
         <div
           style={{
@@ -91,7 +82,8 @@ export default function BhajansPage() {
             </div>
 
             <button
-              onClick={() => togglePlay(currentTrack)}
+              onClick={togglePlayPause}
+              aria-label={isPlaying ? "Pause" : "Play"}
               style={{
                 width: "48px",
                 height: "48px",
@@ -111,12 +103,6 @@ export default function BhajansPage() {
               {isPlaying ? "⏸" : "▶"}
             </button>
           </div>
-
-          <audio
-            ref={audioRef}
-            src={currentTrack.url}
-            onEnded={() => setIsPlaying(false)}
-          />
         </div>
       ) : (
         <div style={{ padding: "20px", textAlign: "center", color: "#9CA3AF", fontSize: "13px" }}>
@@ -136,7 +122,7 @@ export default function BhajansPage() {
           return (
             <div
               key={track.id}
-              onClick={() => togglePlay(track)}
+              onClick={() => handleTrackClick(track)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -166,7 +152,7 @@ export default function BhajansPage() {
                     style={{
                       fontSize: "14px",
                       fontWeight: "600",
-                      color: "#1F2937",
+                      color: isSelected ? "#92400E" : "#1F2937",
                       margin: "0 0 3px",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -176,20 +162,22 @@ export default function BhajansPage() {
                     {track.title}
                   </h4>
                   <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <span
-                      style={{
-                        fontSize: "10px",
-                        backgroundColor: isSelected ? "#FDE68A" : "#F3F4F6",
-                        color: isSelected ? "#B45309" : "#6B7280",
-                        padding: "1px 6px",
-                        borderRadius: "4px",
-                        fontWeight: "600",
-                      }}
-                    >
-                      {track.tag}
-                    </span>
-                    <span style={{ fontSize: "11px", color: "#6B7280" }}>
-                      {track.duration}
+                    {track.tag && (
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          backgroundColor: isSelected ? "#FDE68A" : "#F3F4F6",
+                          color: isSelected ? "#B45309" : "#6B7280",
+                          padding: "1px 6px",
+                          borderRadius: "4px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {track.tag}
+                      </span>
+                    )}
+                    <span style={{ fontSize: "11px", color: isSelected ? "#B45309" : "#6B7280" }}>
+                      {track.singer || "Devotional"} • {track.duration}
                     </span>
                   </div>
                 </div>

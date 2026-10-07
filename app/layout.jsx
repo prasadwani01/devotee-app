@@ -1,7 +1,10 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AudioPlayerProvider } from "../context/AudioPlayerContext";
+import FloatingBottomPlayer from "./components/FloatingBottomPlayer";
 
 // Pure SVG icons - zero external libraries needed
 function HomeIcon() {
@@ -59,13 +62,15 @@ function BottomNav() {
         bottom: 0,
         left: 0,
         right: 0,
+        height: "64px",
+        boxSizing: "border-box",
         zIndex: 50,
         backgroundColor: "#FFFFFF",
         borderTop: "1px solid #FDE68A",
         display: "flex",
         justifyContent: "space-around",
         alignItems: "center",
-        padding: "10px 16px",
+        padding: "8px 16px",
       }}
     >
       {navItems.map((item) => {
@@ -111,13 +116,16 @@ export default function RootLayout({ children }) {
         style={{
           margin: 0,
           padding: 0,
-          paddingBottom: "70px",
+          paddingBottom: "160px",
           backgroundColor: "#FFFDF7",
           fontFamily: "system-ui, -apple-system, sans-serif",
         }}
       >
-        {children}
-        <BottomNav />
+        <AudioPlayerProvider>
+          {children}
+          <FloatingBottomPlayer />
+          <BottomNav />
+        </AudioPlayerProvider>
       </body>
     </html>
   );
