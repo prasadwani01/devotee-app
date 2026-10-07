@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AudioPlayerProvider } from "../context/AudioPlayerContext";
 import FloatingBottomPlayer from "./components/FloatingBottomPlayer";
+import PWAInstallBanner from "@/components/PWAInstallBanner";
 
 // Pure SVG icons - zero external libraries needed
 function HomeIcon() {
@@ -54,6 +55,9 @@ const navItems = [
 
 function BottomNav() {
   const pathname = usePathname();
+
+  // Hide public bottom bar when admin portal is active
+  if (pathname?.startsWith("/admin")) return null;
 
   return (
     <nav
@@ -110,16 +114,20 @@ export default function RootLayout({ children }) {
         .catch((err) => console.warn("SW registration error:", err));
     }
   }, []);
+
   return (
     <html lang="en">
       <head>
-        <title>Devotee Satsang & Yatra</title>
+        <title>Devotee Satsang &amp; Yatra</title>
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
         />
         <meta name="theme-color" content="#D97706" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>
       <body
         style={{
@@ -128,11 +136,21 @@ export default function RootLayout({ children }) {
           paddingBottom: "160px",
           backgroundColor: "#FFFDF7",
           fontFamily: "system-ui, -apple-system, sans-serif",
+          WebkitFontSmoothing: "antialiased",
+          minHeight: "100vh",
+          boxSizing: "border-box",
         }}
       >
         <AudioPlayerProvider>
           {children}
+
+          {/* Floating PWA Install Banner */}
+          <PWAInstallBanner />
+
+          {/* Mini Audio Player attached above bottom dock */}
           <FloatingBottomPlayer />
+
+          {/* Primary Mobile Navigation Dock */}
           <BottomNav />
         </AudioPlayerProvider>
       </body>

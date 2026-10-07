@@ -1,23 +1,20 @@
 {
-  "name": "Devotee Satsang & Yatra",
-  "short_name": "Devotee",
-  "description": "Daily darshan, bhajans, wallpapers, and sacred yatra tours.",
-  "id": "/",
+  "name": "Satsang & Darshan Seva",
+  "short_name": "Satsang",
+  "description": "Daily devotional bhajans, live darshan, and sacred pilgrimages",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#FFFDF7",
+  "background_color": "#FFFBEB",
   "theme_color": "#D97706",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3246/3246726.png",
+      "src": "/home.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3246/3246726.png",
+      "src": "/images.jpg",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
