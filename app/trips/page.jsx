@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function TripsPage() {
@@ -9,6 +9,9 @@ export default function TripsPage() {
   const [whatsappNumber, setWhatsappNumber] = useState("919876543210");
   const [selectedYatra, setSelectedYatra] = useState(null);
   const [formData, setFormData] = useState({ name: "", phone: "", seats: 1 });
+  const [submitting, setSubmitting] = useState(false);
+
+  const formRef = useRef(null);
 
   useEffect(() => {
     async function loadData() {
@@ -22,15 +25,19 @@ export default function TripsPage() {
 
       if (tripsData) setYatraList(tripsData);
 
-      // 2. Fetch coordinator WhatsApp number
-      const { data: settingsData } = await supabase
-        .from("app_settings")
-        .select("whatsapp_number")
-        .eq("id", 1)
-        .single();
+      // 2. Fetch coordinator WhatsApp number (checking settings table)
+      try {
+        const { data: settingsData } = await supabase
+          .from("settings")
+          .select("whatsapp_number")
+          .limit(1)
+          .maybeSingle();
 
-      if (settingsData?.whatsapp_number) {
-        setWhatsappNumber(settingsData.whatsapp_number.trim());
+        if (settingsData?.whatsapp_number) {
+          setWhatsappNumber(settingsData.whatsapp_number.trim());
+        }
+      } catch {
+        // Fallback to default number if table or row is missing
       }
 
       setLoading(false);
@@ -39,13 +46,22 @@ export default function TripsPage() {
     loadData();
   }, []);
 
-const handleWhatsAppBooking = async (e) => {
+  const handleSelectYatra = (yatra) => {
+    setSelectedYatra(yatra);
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
+  const handleWhatsAppBooking = async (e) => {
     e.preventDefault();
 
     if (!formData.name.trim() || !formData.phone.trim()) {
       alert("Please enter both Name and WhatsApp number");
       return;
     }
+
+    setSubmitting(true);
 
     // 1. Save to Supabase Bookings table
     try {
@@ -60,17 +76,16 @@ const handleWhatsAppBooking = async (e) => {
         },
       ]);
     } catch (err) {
-      console.error("Booking save note:", err);
+      console.warn("Booking record warning:", err);
     }
 
     // 2. Format WhatsApp Message
-    const message = 
-`🙏 *Jai Shri Krishna / Pranam!*
+    const message = `🙏 *Jai Shri Krishna / Pranam!*
 I would like to register for the upcoming Yatra.
 
 🚩 *Yatra Tour:* ${selectedYatra.title}
 🗓️ *Dates:* ${selectedYatra.date || "Upcoming"}
-💰 *Fare:* ${selectedYatra.price} per person
+💰 *Fare:* ${selectedYatra.price || "Contact for pricing"} per person
 
 👤 *Devotee Name:* ${formData.name.trim()}
 📞 *Contact Number:* ${formData.phone.trim()}
@@ -81,11 +96,13 @@ Please confirm seat availability and payment details.`;
     const cleanNumber = whatsappNumber.replace(/[^0-9]/g, "");
     const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
 
-    // 3. Open WhatsApp and reset form
-    window.open(whatsappUrl, "_blank");
+    // 3. Reset state & redirect to WhatsApp safely on mobile
+    setSubmitting(false);
     setSelectedYatra(null);
     setFormData({ name: "", phone: "", seats: 1 });
-  };;
+
+    window.location.href = whatsappUrl;
+  };
 
   return (
     <main
@@ -107,6 +124,7 @@ Please confirm seat availability and payment details.`;
       {/* Booking Form Box */}
       {selectedYatra && (
         <div
+          ref={formRef}
           style={{
             backgroundColor: "#FFFBEB",
             border: "1.5px solid #F59E0B",
@@ -116,9 +134,23 @@ Please confirm seat availability and payment details.`;
           }}
         >
           <form onSubmit={handleWhatsAppBooking}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "12px",
+              }}
+            >
               <div>
-                <span style={{ fontSize: "11px", color: "#B45309", fontWeight: "700", textTransform: "uppercase" }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    color: "#B45309",
+                    fontWeight: "700",
+                    textTransform: "uppercase",
+                  }}
+                >
                   Fast Booking
                 </span>
                 <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#1F2937", margin: "2px 0 0" }}>
@@ -142,7 +174,14 @@ Please confirm seat availability and payment details.`;
             </div>
 
             <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", fontSize: "12px", color: "#4B5563", marginBottom: "4px" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "12px",
+                  color: "#4B5563",
+                  marginBottom: "4px",
+                }}
+              >
                 Devotee Full Name
               </label>
               <input
@@ -163,7 +202,14 @@ Please confirm seat availability and payment details.`;
             </div>
 
             <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", fontSize: "12px", color: "#4B5563", marginBottom: "4px" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "12px",
+                  color: "#4B5563",
+                  marginBottom: "4px",
+                }}
+              >
                 WhatsApp Number
               </label>
               <input
@@ -184,7 +230,14 @@ Please confirm seat availability and payment details.`;
             </div>
 
             <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", fontSize: "12px", color: "#4B5563", marginBottom: "4px" }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "12px",
+                  color: "#4B5563",
+                  marginBottom: "4px",
+                }}
+              >
                 Number of Devotees
               </label>
               <input
@@ -206,16 +259,17 @@ Please confirm seat availability and payment details.`;
 
             <button
               type="submit"
+              disabled={submitting}
               style={{
                 width: "100%",
                 padding: "12px",
-                backgroundColor: "#25D366",
+                backgroundColor: submitting ? "#9CA3AF" : "#25D366",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",
                 fontSize: "14px",
                 fontWeight: "700",
-                cursor: "pointer",
+                cursor: submitting ? "default" : "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -223,7 +277,7 @@ Please confirm seat availability and payment details.`;
                 boxShadow: "0 2px 6px rgba(37, 211, 102, 0.3)",
               }}
             >
-              <span>💬</span> Send Registration on WhatsApp
+              <span>💬</span> {submitting ? "Booking Seat..." : "Send Registration on WhatsApp"}
             </button>
           </form>
         </div>
@@ -251,7 +305,14 @@ Please confirm seat availability and payment details.`;
                 boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "8px",
+                }}
+              >
                 <span
                   style={{
                     fontSize: "11px",
@@ -286,10 +347,7 @@ Please confirm seat availability and payment details.`;
               )}
 
               <button
-                onClick={() => {
-                  setSelectedYatra(yatra);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
+                onClick={() => handleSelectYatra(yatra)}
                 style={{
                   width: "100%",
                   padding: "10px",

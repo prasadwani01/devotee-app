@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function AdminDarshanPage() {
@@ -16,9 +16,11 @@ export default function AdminDarshanPage() {
     url: "",
   });
 
+  const fileInputRef = useRef(null);
+
   const showToast = (msg) => {
     setNotice(msg);
-    setTimeout(() => setNotice(""), 3000);
+    setTimeout(() => setNotice(""), 3500);
   };
 
   const fetchWallpapers = async () => {
@@ -95,30 +97,66 @@ export default function AdminDarshanPage() {
       setWallpapers([data[0], ...wallpapers]);
       setNewWall({ title: "", location: "", tag: "Daily Darshan", url: "" });
       setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       showToast("Wallpaper published successfully!");
     }
   };
 
-  const handleDelete = async (id, title) => {
-    const { error } = await supabase.from("wallpapers").delete().eq("id", id);
+  const handleDelete = async (item) => {
+    if (!window.confirm(`Are you sure you want to delete "${item.title}"?`)) {
+      return;
+    }
+
+    // Cleanup storage file if hosted in darshan-wallpapers bucket
+    if (item.url && item.url.includes("/darshan-wallpapers/")) {
+      try {
+        const parts = item.url.split("/darshan-wallpapers/");
+        if (parts[1]) {
+          const filePath = decodeURIComponent(parts[1].split("?")[0]);
+          await supabase.storage.from("darshan-wallpapers").remove([filePath]);
+        }
+      } catch (err) {
+        console.warn("Storage cleanup note:", err);
+      }
+    }
+
+    const { error } = await supabase.from("wallpapers").delete().eq("id", item.id);
     if (error) {
       alert("Delete failed: " + error.message);
     } else {
-      setWallpapers(wallpapers.filter((w) => w.id !== id));
-      showToast(`Deleted "${title}"`);
+      setWallpapers(wallpapers.filter((w) => String(w.id) !== String(item.id)));
+      showToast(`Deleted "${item.title}"`);
     }
   };
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {notice && (
-        <div style={{ backgroundColor: "#D1FAE5", border: "1px solid #10B981", color: "#065F46", padding: "10px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", textAlign: "center" }}>
+        <div
+          style={{
+            backgroundColor: "#D1FAE5",
+            border: "1px solid #10B981",
+            color: "#065F46",
+            padding: "10px",
+            borderRadius: "8px",
+            fontSize: "13px",
+            fontWeight: "600",
+            textAlign: "center",
+          }}
+        >
           ✓ {notice}
         </div>
       )}
 
       {/* Add Wallpaper Box */}
-      <div style={{ backgroundColor: "#FFFBEB", border: "1.5px dashed #F59E0B", borderRadius: "14px", padding: "16px" }}>
+      <div
+        style={{
+          backgroundColor: "#FFFBEB",
+          border: "1.5px dashed #F59E0B",
+          borderRadius: "14px",
+          padding: "16px",
+        }}
+      >
         <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#92400E", margin: "0 0 10px" }}>
           + Add New Darshan Wallpaper
         </h3>
@@ -154,6 +192,7 @@ export default function AdminDarshanPage() {
               Upload Image Directly (Phone Gallery or PC):
             </label>
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
@@ -196,17 +235,52 @@ export default function AdminDarshanPage() {
           Wallpapers {loading ? "(Loading...)" : `(${wallpapers.length})`}
         </h2>
         {wallpapers.map((item) => (
-          <div key={item.id} style={{ display: "flex", gap: "12px", alignItems: "center", backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "10px" }}>
-            <img src={item.url} alt={item.title} style={{ width: "42px", height: "42px", borderRadius: "6px", objectFit: "cover", backgroundColor: "#F3F4F6" }} />
+          <div
+            key={item.id}
+            style={{
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E5E7EB",
+              borderRadius: "10px",
+              padding: "10px",
+            }}
+          >
+            <img
+              src={item.url}
+              alt={item.title}
+              style={{ width: "42px", height: "42px", borderRadius: "6px", objectFit: "cover", backgroundColor: "#F3F4F6" }}
+            />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: "13px", fontWeight: "700", color: "#1F2937", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span
+                style={{
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  color: "#1F2937",
+                  display: "block",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 {item.title}
               </span>
-              <span style={{ fontSize: "11px", color: "#6B7280" }}>{item.location} • {item.tag}</span>
+              <span style={{ fontSize: "11px", color: "#6B7280" }}>
+                {item.location} • {item.tag}
+              </span>
             </div>
             <button
-              onClick={() => handleDelete(item.id, item.title)}
-              style={{ background: "none", border: "none", color: "#DC2626", fontSize: "11px", cursor: "pointer", fontWeight: "600" }}
+              onClick={() => handleDelete(item)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#DC2626",
+                fontSize: "11px",
+                cursor: "pointer",
+                fontWeight: "600",
+                flexShrink: 0,
+              }}
             >
               Delete
             </button>

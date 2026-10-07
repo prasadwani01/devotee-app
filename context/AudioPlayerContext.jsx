@@ -10,6 +10,7 @@ import React, {
   useCallback,
 } from 'react';
 
+// Fallback artwork for lock screen notification
 const FALLBACK_ART =
   'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=512&q=80';
 
@@ -25,16 +26,18 @@ export function AudioPlayerProvider({ children }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [liveDuration, setLiveDuration] = useState(0);
 
-  // New Features: Playback Rate, Repeat Mode, Sleep Timer
+  // Playback Rate, Repeat Mode, Sleep Timer
   const [playbackRate, setPlaybackRate] = useState(1);
   const [repeatMode, setRepeatMode] = useState('all'); // 'all' | 'one' | 'off'
   const [sleepTimerMinutes, setSleepTimerMinutes] = useState(null); // null | 15 | 30 | 60
-  const [sleepTimerRemaining, setSleepTimerRemaining] = useState(null); // seconds left
+  const [sleepTimerRemaining, setSleepTimerRemaining] = useState(null); // seconds remaining
 
   const currentTrack = currentIndex >= 0 ? playlist[currentIndex] || null : null;
 
-  // 1. Initialize HTML5 Audio instance
+  // 1. Initialize HTML5 Audio instance once (Client-side only)
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const audio = new Audio();
     audio.preload = 'metadata';
     audioRef.current = audio;
@@ -58,7 +61,7 @@ export function AudioPlayerProvider({ children }) {
     };
   }, []);
 
-  // Sync playback rate to audio element
+  // Sync playback rate directly to audio element
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = playbackRate;
@@ -72,7 +75,9 @@ export function AudioPlayerProvider({ children }) {
 
       if (repeatMode === 'one' && audioRef.current) {
         audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => setIsPlaying(false));
+        audioRef.current.play().catch((err) => {
+          if (err.name !== 'AbortError') setIsPlaying(false);
+        });
         return list;
       }
 
@@ -99,7 +104,7 @@ export function AudioPlayerProvider({ children }) {
     });
   }, []);
 
-  // Handle track finished
+  // Handle track finished event
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -107,7 +112,9 @@ export function AudioPlayerProvider({ children }) {
     const handleEnded = () => {
       if (repeatMode === 'one') {
         audio.currentTime = 0;
-        audio.play().catch(() => setIsPlaying(false));
+        audio.play().catch((err) => {
+          if (err.name !== 'AbortError') setIsPlaying(false);
+        });
       } else {
         playNext();
       }
@@ -117,11 +124,12 @@ export function AudioPlayerProvider({ children }) {
     return () => audio.removeEventListener('ended', handleEnded);
   }, [playNext, repeatMode]);
 
-  // 3. Central audio pipeline: avoid double-play race conditions
+  // 3. Centralized Audio Pipeline (Prevents AbortError and Double-Play bugs)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
+    // Load new URL only when switching to another track
     if (audio.src !== currentTrack.url) {
       audio.src = currentTrack.url;
       audio.playbackRate = playbackRate;
@@ -130,16 +138,21 @@ export function AudioPlayerProvider({ children }) {
     }
 
     if (isPlaying) {
-      const promise = audio.play();
-      if (promise !== undefined) {
-        promise.catch(() => setIsPlaying(false));
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          // Do not flip state if paused mid-stream or aborted intentionally
+          if (err.name !== 'AbortError') {
+            setIsPlaying(false);
+          }
+        });
       }
     } else {
       audio.pause();
     }
   }, [currentTrack, isPlaying, playbackRate]);
 
-  // 4. Sleep Timer logic
+  // 4. Sleep Timer with memory leak protection
   useEffect(() => {
     if (sleepTimerRef.current) {
       clearInterval(sleepTimerRef.current);
@@ -174,41 +187,78 @@ export function AudioPlayerProvider({ children }) {
     };
   }, [sleepTimerMinutes]);
 
-  // 5. MediaSession API
+  // 5. Mobile Lock Screen & Web MediaSession API
   useEffect(() => {
-    if (!('mediaSession' in navigator) || !currentTrack) return;
+    if (
+      typeof window === 'undefined' ||
+      !('mediaSession' in navigator) ||
+      !currentTrack
+    ) {
+      return;
+    }
 
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: currentTrack.title || 'Sacred Bhajan',
-      artist: currentTrack.singer || 'Devotional Singer',
-      album: currentTrack.tag ? `${currentTrack.tag} Bhajans` : 'Divine Satsang',
-      artwork: [
-        { src: FALLBACK_ART, sizes: '96x96', type: 'image/jpeg' },
-        { src: FALLBACK_ART, sizes: '256x256', type: 'image/jpeg' },
-        { src: FALLBACK_ART, sizes: '512x512', type: 'image/jpeg' },
-      ],
-    });
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title || 'Sacred Bhajan',
+        artist: currentTrack.singer || 'Devotional Singer',
+        album: currentTrack.tag ? `${currentTrack.tag} Bhajans` : 'Divine Satsang',
+        artwork: [
+          { src: FALLBACK_ART, sizes: '96x96', type: 'image/jpeg' },
+          { src: FALLBACK_ART, sizes: '256x256', type: 'image/jpeg' },
+          { src: FALLBACK_ART, sizes: '512x512', type: 'image/jpeg' },
+        ],
+      });
 
-    navigator.mediaSession.setActionHandler('play', () => setIsPlaying(true));
-    navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
-    navigator.mediaSession.setActionHandler('previoustrack', playPrevious);
-    navigator.mediaSession.setActionHandler('nexttrack', playNext);
-    navigator.mediaSession.setActionHandler('seekto', (details) => {
-      if (details.seekTime !== undefined && audioRef.current) {
-        audioRef.current.currentTime = details.seekTime;
-      }
-    });
+      navigator.mediaSession.setActionHandler('play', () => setIsPlaying(true));
+      navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
+      navigator.mediaSession.setActionHandler('previoustrack', playPrevious);
+      navigator.mediaSession.setActionHandler('nexttrack', playNext);
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime !== undefined && audioRef.current) {
+          audioRef.current.currentTime = details.seekTime;
+          setCurrentTime(details.seekTime);
+        }
+      });
+    } catch {
+      // Ignore unsupported browser handlers safely
+    }
 
     return () => {
-      navigator.mediaSession.setActionHandler('play', null);
-      navigator.mediaSession.setActionHandler('pause', null);
-      navigator.mediaSession.setActionHandler('previoustrack', null);
-      navigator.mediaSession.setActionHandler('nexttrack', null);
-      navigator.mediaSession.setActionHandler('seekto', null);
+      try {
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+        navigator.mediaSession.setActionHandler('previoustrack', null);
+        navigator.mediaSession.setActionHandler('nexttrack', null);
+        navigator.mediaSession.setActionHandler('seekto', null);
+      } catch {
+        // Fallback for cleanup
+      }
     };
   }, [currentTrack, playNext, playPrevious]);
 
-  // Helper actions
+  // Lock-screen scrubber position updates
+  useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      !('mediaSession' in navigator) ||
+      !liveDuration ||
+      isNaN(liveDuration)
+    ) {
+      return;
+    }
+
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: Math.max(0, liveDuration),
+        playbackRate: audioRef.current?.playbackRate || 1,
+        position: Math.min(Math.max(0, currentTime), liveDuration),
+      });
+    } catch {
+      // Silently pass rapid seek ticks
+    }
+  }, [currentTime, liveDuration]);
+
+  // Action methods
   const playTrack = (track, queue = []) => {
     const activeQueue = queue.length > 0 ? queue : [track];
     const index = activeQueue.findIndex((t) => String(t.id) === String(track.id));

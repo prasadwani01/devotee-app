@@ -18,7 +18,7 @@ export default function AdminYatrasPage() {
 
   const showToast = (msg) => {
     setNotice(msg);
-    setTimeout(() => setNotice(""), 3000);
+    setTimeout(() => setNotice(""), 3500);
   };
 
   // 1. Fetch live data from Supabase
@@ -48,9 +48,18 @@ export default function AdminYatrasPage() {
       return;
     }
 
+    const payload = {
+      title: newYatra.title.trim(),
+      price: newYatra.price.trim(),
+      date: newYatra.date.trim(),
+      duration: newYatra.duration.trim(),
+      route: newYatra.route.trim(),
+      badge: newYatra.badge,
+    };
+
     const { data, error } = await supabase
       .from("yatras")
-      .insert([newYatra])
+      .insert([payload])
       .select();
 
     if (error) {
@@ -85,11 +94,15 @@ export default function AdminYatrasPage() {
 
   // 4. Delete Yatra
   const handleDelete = async (id, title) => {
+    if (!window.confirm(`Are you sure you want to delete the pilgrimage "${title}"?`)) {
+      return;
+    }
+
     const { error } = await supabase.from("yatras").delete().eq("id", id);
     if (error) {
       alert("Delete failed: " + error.message);
     } else {
-      setYatras(yatras.filter((item) => item.id !== id));
+      setYatras(yatras.filter((item) => String(item.id) !== String(id)));
       showToast(`Deleted "${title}"`);
     }
   };
@@ -216,7 +229,7 @@ export default function AdminYatrasPage() {
                   value={yatra.price || ""}
                   onChange={(e) => {
                     const val = e.target.value;
-                    setYatras(yatras.map((item) => (item.id === yatra.id ? { ...item, price: val } : item)));
+                    setYatras(yatras.map((item) => (String(item.id) === String(yatra.id) ? { ...item, price: val } : item)));
                   }}
                   style={{ width: "100%", boxSizing: "border-box", padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px", fontWeight: "600" }}
                 />
@@ -228,7 +241,7 @@ export default function AdminYatrasPage() {
                   value={yatra.badge || "Booking Open"}
                   onChange={(e) => {
                     const val = e.target.value;
-                    setYatras(yatras.map((item) => (item.id === yatra.id ? { ...item, badge: val } : item)));
+                    setYatras(yatras.map((item) => (String(item.id) === String(yatra.id) ? { ...item, badge: val } : item)));
                   }}
                   style={{ width: "100%", boxSizing: "border-box", padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
                 >
@@ -247,7 +260,7 @@ export default function AdminYatrasPage() {
                 value={yatra.date || ""}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setYatras(yatras.map((item) => (item.id === yatra.id ? { ...item, date: val } : item)));
+                  setYatras(yatras.map((item) => (String(item.id) === String(yatra.id) ? { ...item, date: val } : item)));
                 }}
                 style={{ width: "100%", boxSizing: "border-box", padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
               />

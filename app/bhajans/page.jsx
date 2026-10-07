@@ -28,7 +28,8 @@ export default function BhajansPage() {
   }, []);
 
   const handleTrackClick = (track) => {
-    if (currentTrack?.id === track.id) {
+    const isCurrent = currentTrack && String(currentTrack.id) === String(track.id);
+    if (isCurrent) {
       togglePlayPause();
     } else {
       // Pass the selected track and full trackList as the auto-play queue
@@ -117,7 +118,7 @@ export default function BhajansPage() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {trackList.map((track, index) => {
-          const isSelected = currentTrack?.id === track.id;
+          const isSelected = currentTrack && String(currentTrack.id) === String(track.id);
 
           return (
             <div
@@ -183,7 +184,9 @@ export default function BhajansPage() {
                 </div>
               </div>
 
+              {/* Visual indicator (no nested button conflict) */}
               <div
+                aria-hidden="true"
                 style={{
                   width: "32px",
                   height: "32px",

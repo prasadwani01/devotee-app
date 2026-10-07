@@ -37,7 +37,7 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Cache-first for audio files (MP3s or Supabase bhajan storage)
+  // 1. Audio stream caching (handles byte-range headers cleanly for iOS Safari)
   if (
     req.destination === 'audio' ||
     url.pathname.endsWith('.mp3') ||
@@ -45,13 +45,14 @@ self.addEventListener('fetch', (event) => {
   ) {
     event.respondWith(
       caches.open(AUDIO_CACHE).then(async (cache) => {
-        const cached = await cache.match(req);
+        // Match against exact URL rather than range-header-dependent Request object
+        const cached = await cache.match(req.url);
         if (cached) return cached;
 
         try {
           const fresh = await fetch(req);
-          if (fresh.status === 200 || fresh.type === 'opaque') {
-            cache.put(req, fresh.clone());
+          if (fresh.status === 200 || fresh.status === 206 || fresh.type === 'opaque') {
+            cache.put(req.url, fresh.clone());
           }
           return fresh;
         } catch {
@@ -62,7 +63,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first with fallback for pages
+  // 2. Navigation fallback
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req).catch(() =>
@@ -72,7 +73,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-while-revalidate / cache-first for other static assets
+  // 3. Static asset caching
   event.respondWith(
     caches.match(req).then((cached) => cached || fetch(req))
   );
