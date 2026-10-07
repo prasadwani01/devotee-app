@@ -1,46 +1,43 @@
 "use client";
 
-import { useState } from "react";
-
-// Replace with your Satsang coordinator's actual WhatsApp number (include country code, without '+' or spaces)
-const SATSANG_WHATSAPP_NUMBER = "917020135562";
-
-const yatraList = [
-  {
-    id: 1,
-    title: "Char Dham Yatra",
-    badge: "Most Popular",
-    duration: "12 Days / 11 Nights",
-    date: "May 10 – May 21, 2026",
-    price: "₹32,500",
-    route: "Haridwar • Yamunotri • Gangotri • Kedarnath • Badrinath",
-    includes: "Deluxe Bus, Satvik Meals, Hotel Stay, VIP Darshan Support",
-  },
-  {
-    id: 2,
-    title: "Vrindavan & Mathura Braj Darshan",
-    badge: "Weekend Special",
-    duration: "4 Days / 3 Nights",
-    date: "June 05 – June 08, 2026",
-    price: "₹7,800",
-    route: "Mathura • Vrindavan • Gokul • Govardhan Parikrama",
-    includes: "AC Travel, Temple Guide, Hotel, Morning & Evening Aarti",
-  },
-  {
-    id: 3,
-    title: "Kashi, Ayodhya & Prayagraj Sangam",
-    badge: "Upcoming",
-    duration: "6 Days / 5 Nights",
-    date: "July 15 – July 20, 2026",
-    price: "₹14,200",
-    route: "Varanasi (Kashi Vishwanath) • Ayodhya Ram Mandir • Prayagraj",
-    includes: "Boat Ride at Ganga Aarti, 3-Star Stay, All Meals Included",
-  },
-];
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function TripsPage() {
+  const [yatraList, setYatraList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [whatsappNumber, setWhatsappNumber] = useState("919876543210");
   const [selectedYatra, setSelectedYatra] = useState(null);
   const [formData, setFormData] = useState({ name: "", phone: "", seats: 1 });
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+
+      // 1. Fetch live yatras
+      const { data: tripsData } = await supabase
+        .from("yatras")
+        .select("*")
+        .order("id", { ascending: false });
+
+      if (tripsData) setYatraList(tripsData);
+
+      // 2. Fetch coordinator WhatsApp number
+      const { data: settingsData } = await supabase
+        .from("app_settings")
+        .select("whatsapp_number")
+        .eq("id", 1)
+        .single();
+
+      if (settingsData?.whatsapp_number) {
+        setWhatsappNumber(settingsData.whatsapp_number.trim());
+      }
+
+      setLoading(false);
+    }
+
+    loadData();
+  }, []);
 
   const handleWhatsAppBooking = (e) => {
     e.preventDefault();
@@ -50,13 +47,12 @@ export default function TripsPage() {
       return;
     }
 
-    // Build the devotional WhatsApp message
     const message = 
 `🙏 *Jai Shri Krishna / Pranam!*
 I would like to register for the upcoming Yatra.
 
 🚩 *Yatra Tour:* ${selectedYatra.title}
-🗓️ *Dates:* ${selectedYatra.date}
+🗓️ *Dates:* ${selectedYatra.date || "Upcoming"}
 💰 *Fare:* ${selectedYatra.price} per person
 
 👤 *Devotee Name:* ${formData.name.trim()}
@@ -65,10 +61,9 @@ I would like to register for the upcoming Yatra.
 
 Please confirm seat availability and sharing payment details.`;
 
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${SATSANG_WHATSAPP_NUMBER}?text=${encodedMessage}`;
+    const cleanNumber = whatsappNumber.replace(/[^0-9]/g, "");
+    const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
 
-    // Open WhatsApp
     window.open(whatsappUrl, "_blank");
   };
 
@@ -215,74 +210,85 @@ Please confirm seat availability and sharing payment details.`;
       )}
 
       {/* Yatra Cards List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {yatraList.map((yatra) => (
-          <div
-            key={yatra.id}
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "14px",
-              padding: "16px",
-              border: "1px solid #FDE68A",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-              <span
-                style={{
-                  fontSize: "11px",
-                  backgroundColor: "#FEF3C7",
-                  color: "#B45309",
-                  padding: "2px 8px",
-                  borderRadius: "10px",
-                  fontWeight: "600",
-                }}
-              >
-                {yatra.badge}
-              </span>
-              <span style={{ fontSize: "15px", fontWeight: "700", color: "#D97706" }}>
-                {yatra.price}
-              </span>
-            </div>
-
-            <h2 style={{ fontSize: "17px", fontWeight: "700", color: "#1F2937", margin: "0 0 6px" }}>
-              {yatra.title}
-            </h2>
-
-            <p style={{ fontSize: "12px", color: "#6B7280", margin: "0 0 8px" }}>
-              🗓️ {yatra.date} ({yatra.duration})
-            </p>
-
-            <p style={{ fontSize: "13px", color: "#374151", margin: "0 0 8px", lineHeight: "1.4" }}>
-              📍 <strong>Route:</strong> {yatra.route}
-            </p>
-
-            <p style={{ fontSize: "12px", color: "#4B5563", margin: "0 0 14px", backgroundColor: "#F9FAFB", padding: "8px 10px", borderRadius: "6px" }}>
-              ✨ <strong>Included:</strong> {yatra.includes}
-            </p>
-
-            <button
-              onClick={() => {
-                setSelectedYatra(yatra);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
+      {loading ? (
+        <div style={{ padding: "40px 0", textAlign: "center", color: "#9CA3AF", fontSize: "13px" }}>
+          Loading active yatra listings...
+        </div>
+      ) : yatraList.length === 0 ? (
+        <div style={{ padding: "40px 0", textAlign: "center", color: "#9CA3AF", fontSize: "13px" }}>
+          No pilgrimages scheduled right now. Check back soon.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {yatraList.map((yatra) => (
+            <div
+              key={yatra.id}
               style={{
-                width: "100%",
-                padding: "10px",
-                backgroundColor: "#D97706",
-                color: "#FFFFFF",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "13px",
-                fontWeight: "600",
-                cursor: "pointer",
+                backgroundColor: "#FFFFFF",
+                borderRadius: "14px",
+                padding: "16px",
+                border: "1px solid #FDE68A",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
               }}
             >
-              Register for this Yatra
-            </button>
-          </div>
-        ))}
-      </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    backgroundColor: "#FEF3C7",
+                    color: "#B45309",
+                    padding: "2px 8px",
+                    borderRadius: "10px",
+                    fontWeight: "600",
+                  }}
+                >
+                  {yatra.badge || "Booking Open"}
+                </span>
+                <span style={{ fontSize: "15px", fontWeight: "700", color: "#D97706" }}>
+                  {yatra.price}
+                </span>
+              </div>
+
+              <h2 style={{ fontSize: "17px", fontWeight: "700", color: "#1F2937", margin: "0 0 6px" }}>
+                {yatra.title}
+              </h2>
+
+              {yatra.date && (
+                <p style={{ fontSize: "12px", color: "#6B7280", margin: "0 0 8px" }}>
+                  🗓️ {yatra.date} {yatra.duration ? `(${yatra.duration})` : ""}
+                </p>
+              )}
+
+              {yatra.route && (
+                <p style={{ fontSize: "13px", color: "#374151", margin: "0 0 8px", lineHeight: "1.4" }}>
+                  📍 <strong>Route:</strong> {yatra.route}
+                </p>
+              )}
+
+              <button
+                onClick={() => {
+                  setSelectedYatra(yatra);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  backgroundColor: "#D97706",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  marginTop: "8px",
+                }}
+              >
+                Register for this Yatra
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

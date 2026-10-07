@@ -2,37 +2,66 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 export default function HomePage() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [settings, setSettings] = useState({
+    greeting: "Jai Shri Krishna",
+    subtitle: "Welcome to your daily spiritual satsang & yatra companion.",
+  });
+  const [featuredYatra, setFeaturedYatra] = useState(null);
 
   useEffect(() => {
-    // Check if the app is already running in standalone (installed) mode
+    // 1. Check standalone PWA mode
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       window.navigator.standalone === true;
 
     if (isStandalone) {
       setShowInstallBanner(false);
-      return;
     }
 
     const handleBeforeInstallPrompt = (e) => {
-      // Prevent browser's automatic mini-infobar
       e.preventDefault();
-      // Stash event so it can be triggered later
       setDeferredPrompt(e);
       setShowInstallBanner(true);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
-    // If installed during this session, hide banner
     window.addEventListener("appinstalled", () => {
       setShowInstallBanner(false);
       setDeferredPrompt(null);
     });
+
+    // 2. Fetch live banner text & featured trip from Supabase
+    async function loadHomeData() {
+      const { data: settingsData } = await supabase
+        .from("app_settings")
+        .select("greeting, subtitle")
+        .eq("id", 1)
+        .single();
+
+      if (settingsData) {
+        setSettings({
+          greeting: settingsData.greeting || "Jai Shri Krishna",
+          subtitle: settingsData.subtitle || "Welcome to your daily spiritual satsang & yatra companion.",
+        });
+      }
+
+      const { data: yatraData } = await supabase
+        .from("yatras")
+        .select("*")
+        .order("id", { ascending: false })
+        .limit(1);
+
+      if (yatraData && yatraData.length > 0) {
+        setFeaturedYatra(yatraData[0]);
+      }
+    }
+
+    loadHomeData();
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -45,10 +74,8 @@ export default function HomePage() {
       return;
     }
 
-    // Show native prompt
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
     if (outcome === "accepted") {
       setShowInstallBanner(false);
     }
@@ -63,7 +90,7 @@ export default function HomePage() {
         margin: "0 auto",
       }}
     >
-      {/* Dynamic PWA Install Banner */}
+      {/* PWA Install Banner */}
       {showInstallBanner && (
         <aside
           aria-label="Install App"
@@ -126,7 +153,7 @@ export default function HomePage() {
         </aside>
       )}
 
-      {/* Header Banner */}
+      {/* Dynamic Header Banner (Loaded from Supabase) */}
       <header
         style={{
           background: "linear-gradient(135deg, #F59E0B, #D97706)",
@@ -139,56 +166,58 @@ export default function HomePage() {
       >
         <span style={{ fontSize: "28px" }}>🪔</span>
         <h1 style={{ fontSize: "20px", fontWeight: "700", margin: "8px 0 4px" }}>
-          Jai Shri Krishna
+          {settings.greeting}
         </h1>
-        <p style={{ fontSize: "13px", opacity: 0.9, margin: 0 }}>
-          Welcome to your daily spiritual satsang &amp; yatra companion.
+        <p style={{ fontSize: "13px", opacity: 0.9, margin: 0, lineHeight: "1.4" }}>
+          {settings.subtitle}
         </p>
       </header>
 
-      {/* Quick Action Cards */}
+      {/* Quick Navigation Cards */}
       <section style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {/* Card 1: Featured Yatra */}
-        <div
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: "14px",
-            padding: "16px",
-            border: "1px solid #FDE68A",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "11px", fontWeight: "700", color: "#D97706", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Upcoming Yatra
-            </span>
-            <span style={{ fontSize: "11px", backgroundColor: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: "10px", fontWeight: "600" }}>
-              Booking Open
-            </span>
-          </div>
-          <h2 style={{ fontSize: "17px", fontWeight: "600", margin: "10px 0 6px", color: "#1F2937" }}>
-            Char Dham Yatra 2026
-          </h2>
-          <p style={{ fontSize: "13px", color: "#4B5563", margin: "0 0 14px", lineHeight: "1.4" }}>
-            12 Days divine pilgrimage covering Yamunotri, Gangotri, Kedarnath &amp; Badrinath.
-          </p>
-          <Link
-            href="/trips"
+        {/* Card 1: Live Featured Yatra */}
+        {featuredYatra && (
+          <div
             style={{
-              display: "block",
-              textAlign: "center",
-              backgroundColor: "#D97706",
-              color: "#FFFFFF",
-              padding: "10px",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontSize: "13px",
-              fontWeight: "600",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              padding: "16px",
+              border: "1px solid #FDE68A",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
             }}
           >
-            View Details &amp; Register
-          </Link>
-        </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "#D97706", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Upcoming Yatra
+              </span>
+              <span style={{ fontSize: "11px", backgroundColor: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: "10px", fontWeight: "600" }}>
+                {featuredYatra.badge || "Booking Open"}
+              </span>
+            </div>
+            <h2 style={{ fontSize: "17px", fontWeight: "600", margin: "10px 0 6px", color: "#1F2937" }}>
+              {featuredYatra.title}
+            </h2>
+            <p style={{ fontSize: "13px", color: "#4B5563", margin: "0 0 14px", lineHeight: "1.4" }}>
+              {featuredYatra.duration ? `${featuredYatra.duration} • ` : ""}{featuredYatra.route || featuredYatra.date}
+            </p>
+            <Link
+              href="/trips"
+              style={{
+                display: "block",
+                textAlign: "center",
+                backgroundColor: "#D97706",
+                color: "#FFFFFF",
+                padding: "10px",
+                borderRadius: "8px",
+                textDecoration: "none",
+                fontSize: "13px",
+                fontWeight: "600",
+              }}
+            >
+              View Details &amp; Register
+            </Link>
+          </div>
+        )}
 
         {/* Card 2: Today's Darshan & Wallpapers */}
         <Link
@@ -231,7 +260,7 @@ export default function HomePage() {
           </div>
         </Link>
 
-        {/* Card 3: Bhajans & Kirtan */}
+        {/* Card 3: Bhajans & Kirtans */}
         <Link
           href="/bhajans"
           style={{
