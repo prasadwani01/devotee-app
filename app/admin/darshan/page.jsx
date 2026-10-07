@@ -6,8 +6,15 @@ import { supabase } from "@/lib/supabase";
 export default function AdminDarshanPage() {
   const [wallpapers, setWallpapers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState("");
-  const [newWall, setNewWall] = useState({ title: "", location: "", tag: "Daily Darshan", url: "" });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [newWall, setNewWall] = useState({
+    title: "",
+    location: "",
+    tag: "Daily Darshan",
+    url: "",
+  });
 
   const showToast = (msg) => {
     setNotice(msg);
@@ -31,16 +38,50 @@ export default function AdminDarshanPage() {
   }, []);
 
   const handleAddWallpaper = async () => {
-    if (!newWall.title.trim() || !newWall.url.trim()) {
-      alert("Title and Image URL are required");
+    if (!newWall.title.trim()) {
+      alert("Please provide a title for the Darshan");
       return;
     }
 
+    let finalImageUrl = newWall.url.trim();
+
+    // 1. If a local file is picked, upload to Supabase Storage first
+    if (selectedFile) {
+      setUploading(true);
+      const fileExt = selectedFile.name.split(".").pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("darshan-wallpapers")
+        .upload(filePath, selectedFile, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) {
+        alert("Image upload failed: " + uploadError.message);
+        setUploading(false);
+        return;
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from("darshan-wallpapers")
+        .getPublicUrl(filePath);
+
+      finalImageUrl = publicUrlData.publicUrl;
+      setUploading(false);
+    }
+
+    if (!finalImageUrl) {
+      alert("Please either choose an image file or provide an Image URL");
+      return;
+    }
+
+    // 2. Insert into PostgreSQL wallpapers table
     const payload = {
       title: newWall.title.trim(),
       location: newWall.location.trim() || "Sacred Shrine",
       tag: newWall.tag,
-      url: newWall.url.trim(),
+      url: finalImageUrl,
     };
 
     const { data, error } = await supabase
@@ -53,6 +94,7 @@ export default function AdminDarshanPage() {
     } else {
       setWallpapers([data[0], ...wallpapers]);
       setNewWall({ title: "", location: "", tag: "Daily Darshan", url: "" });
+      setSelectedFile(null);
       showToast("Wallpaper published successfully!");
     }
   };
@@ -80,7 +122,7 @@ export default function AdminDarshanPage() {
         <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#92400E", margin: "0 0 10px" }}>
           + Add New Darshan Wallpaper
         </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <input
             type="text"
             placeholder="Temple / Deity Title (e.g. Mahakaleshwar Jyotirlinga)"
@@ -88,6 +130,7 @@ export default function AdminDarshanPage() {
             onChange={(e) => setNewWall({ ...newWall, title: e.target.value })}
             style={{ padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
           />
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
             <input
               type="text"
@@ -104,18 +147,45 @@ export default function AdminDarshanPage() {
               style={{ padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
             />
           </div>
+
+          {/* Native File Upload Input */}
+          <div style={{ backgroundColor: "#FFFFFF", padding: "10px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+            <label style={{ fontSize: "11px", fontWeight: "700", color: "#4B5563", display: "block", marginBottom: "4px" }}>
+              Upload Image Directly (Phone Gallery or PC):
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              style={{ fontSize: "12px", color: "#374151" }}
+            />
+          </div>
+
+          <div style={{ textAlign: "center", fontSize: "11px", color: "#9CA3AF" }}>— OR PASTE IMAGE LINK —</div>
+
           <input
             type="url"
-            placeholder="Direct Image URL"
+            placeholder="Direct Web Image URL (Optional if file uploaded)"
             value={newWall.url}
             onChange={(e) => setNewWall({ ...newWall, url: e.target.value })}
             style={{ padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
           />
+
           <button
             onClick={handleAddWallpaper}
-            style={{ backgroundColor: "#D97706", color: "#FFFFFF", border: "none", borderRadius: "6px", padding: "10px", fontWeight: "700", fontSize: "13px", cursor: "pointer" }}
+            disabled={uploading}
+            style={{
+              backgroundColor: uploading ? "#9CA3AF" : "#D97706",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "6px",
+              padding: "10px",
+              fontWeight: "700",
+              fontSize: "13px",
+              cursor: uploading ? "not-allowed" : "pointer",
+            }}
           >
-            Publish Wallpaper
+            {uploading ? "Uploading File..." : "Publish Wallpaper"}
           </button>
         </div>
       </div>

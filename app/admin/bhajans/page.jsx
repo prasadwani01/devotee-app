@@ -6,7 +6,9 @@ import { supabase } from "@/lib/supabase";
 export default function AdminBhajansPage() {
   const [bhajans, setBhajans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState("");
+  const [selectedAudioFile, setSelectedAudioFile] = useState(null);
   const [newBhajan, setNewBhajan] = useState({
     title: "",
     singer: "",
@@ -37,17 +39,50 @@ export default function AdminBhajansPage() {
   }, []);
 
   const handleAddBhajan = async () => {
-    if (!newBhajan.title.trim() || !newBhajan.url.trim()) {
-      alert("Please provide at least a Title and Audio URL");
+    if (!newBhajan.title.trim()) {
+      alert("Please provide at least a Track Title");
       return;
     }
 
+    let finalAudioUrl = newBhajan.url.trim();
+
+    // 1. If an audio file is selected, upload to Supabase Storage
+    if (selectedAudioFile) {
+      setUploading(true);
+      const fileExt = selectedAudioFile.name.split(".").pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const filePath = `tracks/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("bhajans-audio")
+        .upload(filePath, selectedAudioFile, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) {
+        alert("Audio upload failed: " + uploadError.message);
+        setUploading(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("bhajans-audio")
+        .getPublicUrl(filePath);
+
+      finalAudioUrl = publicUrlData.publicUrl;
+      setUploading(false);
+    }
+
+    if (!finalAudioUrl) {
+      alert("Please choose an MP3 audio file or provide a direct stream URL");
+      return;
+    }
+
+    // 2. Insert into PostgreSQL bhajans table
     const payload = {
       title: newBhajan.title.trim(),
       singer: newBhajan.singer.trim() || "Devotional Singer",
       duration: newBhajan.duration.trim() || "4:00",
       tag: newBhajan.tag,
-      url: newBhajan.url.trim(),
+      url: finalAudioUrl,
     };
 
     const { data, error } = await supabase
@@ -60,6 +95,7 @@ export default function AdminBhajansPage() {
     } else {
       setBhajans([data[0], ...bhajans]);
       setNewBhajan({ title: "", singer: "", duration: "", tag: "Morning Aarti", url: "" });
+      setSelectedAudioFile(null);
       showToast("Track published successfully!");
     }
   };
@@ -87,7 +123,7 @@ export default function AdminBhajansPage() {
         <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#92400E", margin: "0 0 10px" }}>
           + Add New Bhajan / Aarti
         </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <input
             type="text"
             placeholder="Track Title (e.g. Om Jai Jagdish Hare)"
@@ -95,6 +131,7 @@ export default function AdminBhajansPage() {
             onChange={(e) => setNewBhajan({ ...newBhajan, title: e.target.value })}
             style={{ padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
           />
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
             <input
               type="text"
@@ -111,31 +148,57 @@ export default function AdminBhajansPage() {
               style={{ padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
             />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-            <select
-              value={newBhajan.tag}
-              onChange={(e) => setNewBhajan({ ...newBhajan, tag: e.target.value })}
-              style={{ padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
-            >
-              <option value="Morning Aarti">Morning Aarti</option>
-              <option value="Dhun & Japa">Dhun &amp; Japa</option>
-              <option value="Evening Aarti">Evening Aarti</option>
-              <option value="Stotram">Stotram</option>
-              <option value="Satsang Kirtan">Satsang Kirtan</option>
-            </select>
+
+          <select
+            value={newBhajan.tag}
+            onChange={(e) => setNewBhajan({ ...newBhajan, tag: e.target.value })}
+            style={{ padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
+          >
+            <option value="Morning Aarti">Morning Aarti</option>
+            <option value="Dhun & Japa">Dhun &amp; Japa</option>
+            <option value="Evening Aarti">Evening Aarti</option>
+            <option value="Stotram">Stotram</option>
+            <option value="Satsang Kirtan">Satsang Kirtan</option>
+          </select>
+
+          {/* Native Audio File Upload */}
+          <div style={{ backgroundColor: "#FFFFFF", padding: "10px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+            <label style={{ fontSize: "11px", fontWeight: "700", color: "#4B5563", display: "block", marginBottom: "4px" }}>
+              Upload Audio File (.mp3, .m4a, .wav):
+            </label>
             <input
-              type="url"
-              placeholder="Direct MP3 Audio URL"
-              value={newBhajan.url}
-              onChange={(e) => setNewBhajan({ ...newBhajan, url: e.target.value })}
-              style={{ padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
+              type="file"
+              accept="audio/*"
+              onChange={(e) => setSelectedAudioFile(e.target.files?.[0] || null)}
+              style={{ fontSize: "12px", color: "#374151" }}
             />
           </div>
+
+          <div style={{ textAlign: "center", fontSize: "11px", color: "#9CA3AF" }}>— OR PASTE STREAM LINK —</div>
+
+          <input
+            type="url"
+            placeholder="Direct MP3 Audio URL (Optional if file chosen above)"
+            value={newBhajan.url}
+            onChange={(e) => setNewBhajan({ ...newBhajan, url: e.target.value })}
+            style={{ padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
+          />
+
           <button
             onClick={handleAddBhajan}
-            style={{ backgroundColor: "#D97706", color: "#FFFFFF", border: "none", borderRadius: "6px", padding: "10px", fontWeight: "700", fontSize: "13px", cursor: "pointer", marginTop: "4px" }}
+            disabled={uploading}
+            style={{
+              backgroundColor: uploading ? "#9CA3AF" : "#D97706",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "6px",
+              padding: "10px",
+              fontWeight: "700",
+              fontSize: "13px",
+              cursor: uploading ? "not-allowed" : "pointer",
+            }}
           >
-            Publish Track
+            {uploading ? "Uploading Audio..." : "Publish Track"}
           </button>
         </div>
       </div>
@@ -143,7 +206,7 @@ export default function AdminBhajansPage() {
       {/* Track List */}
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         <h2 style={{ fontSize: "15px", fontWeight: "700", color: "#374151", margin: 0 }}>
-          Live Audio Tracks {loading ? "(Loading...)" : `(${bhajans.length})`}
+          Audio Tracks {loading ? "(Loading...)" : `(${bhajans.length})`}
         </h2>
 
         {bhajans.map((track) => (
