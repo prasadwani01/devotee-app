@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 const modules = [
@@ -59,7 +61,6 @@ export default function AdminOverviewPage() {
               textDecoration: "none",
               color: "inherit",
               boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
-              transition: "transform 0.1s ease",
             }}
           >
             <div
