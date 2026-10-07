@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AudioPlayerProvider } from "../context/AudioPlayerContext";
 import FloatingBottomPlayer from "./components/FloatingBottomPlayer";
+import React, { useEffect } from "react";
 
 // Pure SVG icons - zero external libraries needed
 function HomeIcon() {
@@ -101,6 +102,15 @@ function BottomNav() {
 }
 
 export default function RootLayout({ children }) {
+  // Register Service Worker for offline PWA & audio caching
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => console.log("Satsang SW registered:", reg.scope))
+        .catch((err) => console.warn("SW registration error:", err));
+    }
+  }, []);
   return (
     <html lang="en">
       <head>

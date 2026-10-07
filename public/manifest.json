@@ -2,8 +2,11 @@
   "name": "Devotee Satsang & Yatra",
   "short_name": "Devotee",
   "description": "Daily darshan, bhajans, wallpapers, and sacred yatra tours.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#FFFDF7",
   "theme_color": "#D97706",
   "icons": [
