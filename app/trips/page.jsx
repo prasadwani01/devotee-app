@@ -39,7 +39,7 @@ export default function TripsPage() {
     loadData();
   }, []);
 
-  const handleWhatsAppBooking = (e) => {
+const handleWhatsAppBooking = async (e) => {
     e.preventDefault();
 
     if (!formData.name.trim() || !formData.phone.trim()) {
@@ -47,6 +47,23 @@ export default function TripsPage() {
       return;
     }
 
+    // 1. Save to Supabase Bookings table
+    try {
+      await supabase.from("bookings").insert([
+        {
+          yatra_id: selectedYatra.id,
+          yatra_title: selectedYatra.title,
+          devotee_name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          seats: Number(formData.seats) || 1,
+          status: "Pending Verification",
+        },
+      ]);
+    } catch (err) {
+      console.error("Booking save note:", err);
+    }
+
+    // 2. Format WhatsApp Message
     const message = 
 `🙏 *Jai Shri Krishna / Pranam!*
 I would like to register for the upcoming Yatra.
@@ -59,13 +76,16 @@ I would like to register for the upcoming Yatra.
 📞 *Contact Number:* ${formData.phone.trim()}
 👥 *Total Devotees:* ${formData.seats}
 
-Please confirm seat availability and sharing payment details.`;
+Please confirm seat availability and payment details.`;
 
     const cleanNumber = whatsappNumber.replace(/[^0-9]/g, "");
     const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
 
+    // 3. Open WhatsApp and reset form
     window.open(whatsappUrl, "_blank");
-  };
+    setSelectedYatra(null);
+    setFormData({ name: "", phone: "", seats: 1 });
+  };;
 
   return (
     <main
