@@ -1,11 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AudioPlayerProvider } from "../context/AudioPlayerContext";
 import FloatingBottomPlayer from "./components/FloatingBottomPlayer";
-import React, { useEffect } from "react";
 
 // Pure SVG icons - zero external libraries needed
 function HomeIcon() {
