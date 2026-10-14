@@ -3,26 +3,71 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
+const CACHE_KEY = "satsang_cached_books_v1";
+
 export default function BooksPage() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
   const [fontSize, setFontSize] = useState(16);
   const [readerTheme, setReaderTheme] = useState("sepia"); // "sepia" | "light" | "dark"
   const [filterCat, setFilterCat] = useState("all");
 
   useEffect(() => {
+    // 1. Detect network status
+    const updateOnlineStatus = () => setIsOffline(!navigator.onLine);
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    setIsOffline(!navigator.onLine);
+
+    // 2. Load books with Cache-First / Fallback strategy
     async function loadBooks() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("books")
-        .select("*")
-        .order("id", { ascending: false });
 
-      if (!error && data) setBooks(data);
+      // Check local cache first
+      let localData = null;
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          localData = JSON.parse(cached);
+          setBooks(localData);
+          setLoading(false); // Immediate display for older devices / zero latency
+        }
+      } catch (e) {
+        console.warn("Storage access issue:", e);
+      }
+
+      // If online, fetch fresh data from Supabase & update cache
+      if (navigator.onLine) {
+        try {
+          const { data, error } = await supabase
+            .from("books")
+            .select("*")
+            .order("id", { ascending: false });
+
+          if (!error && data) {
+            setBooks(data);
+            try {
+              localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            } catch (storageErr) {
+              console.warn("Failed to update cache:", storageErr);
+            }
+          }
+        } catch (fetchErr) {
+          console.warn("Network request failed, staying with cached data:", fetchErr);
+        }
+      }
+
       setLoading(false);
     }
+
     loadBooks();
+
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
   }, []);
 
   const categories = ["all", ...Array.from(new Set(books.map((b) => b.category).filter(Boolean)))];
@@ -41,9 +86,28 @@ export default function BooksPage() {
     <div style={{ maxWidth: "600px", margin: "0 auto", padding: "16px 16px 90px" }}>
       {/* Top Header */}
       <header style={{ marginBottom: "16px" }}>
-        <span style={{ fontSize: "11px", fontWeight: "700", color: "#D97706", textTransform: "uppercase" }}>
-          धार्मिक ग्रंथालय • Sacred Scriptures
-        </span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: "#D97706", textTransform: "uppercase" }}>
+            धार्मिक ग्रंथालय • Sacred Scriptures
+          </span>
+          {isOffline && (
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: "700",
+                backgroundColor: "#FEE2E2",
+                color: "#991B1B",
+                padding: "2px 8px",
+                borderRadius: "12px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              ⚡ Offline Mode (Saved Books)
+            </span>
+          )}
+        </div>
         <h1 style={{ fontSize: "20px", fontWeight: "800", color: "#1F2937", margin: "4px 0 0" }}>
           Devotional Books & Granth
         </h1>
@@ -75,13 +139,13 @@ export default function BooksPage() {
       )}
 
       {/* Book List Grid */}
-      {loading ? (
+      {loading && books.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "#6B7280", fontSize: "13px" }}>
           Opening sacred library...
         </div>
       ) : filteredBooks.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "#9CA3AF", fontSize: "13px" }}>
-          No scriptures available yet.
+          {isOffline ? "No scriptures cached yet. Connect once to save them." : "No scriptures available yet."}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "12px" }}>
