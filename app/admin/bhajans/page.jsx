@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { sanitizeMediaUrl, validateMediaUrl } from "@/lib/urlValidator";
 
 export default function AdminBhajansPage() {
-  const [bhajans, setBhajans] = useState([]);
+const [bhajans, setBhajans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState("");
   const [selectedAudioFile, setSelectedAudioFile] = useState(null);
+  const [audioWarning, setAudioWarning] = useState(null);
   const [newBhajan, setNewBhajan] = useState({
     title: "",
     singer: "",
@@ -16,6 +18,18 @@ export default function AdminBhajansPage() {
     tag: "Morning Aarti",
     url: "",
   });
+
+  const handleAudioUrlChange = (value) => {
+    // 1. Auto-convert Drive or Dropbox links seamlessly
+    const converted = sanitizeMediaUrl(value);
+    
+    // 2. Update newBhajan.url directly
+    setNewBhajan((prev) => ({ ...prev, url: converted }));
+
+    // 3. Validate for YouTube or invalid page links
+    const warning = validateMediaUrl(converted, "audio");
+    setAudioWarning(warning);
+  };
 
   const fileInputRef = useRef(null);
 
@@ -130,7 +144,7 @@ export default function AdminBhajansPage() {
     }
   };
 
-  return (
+return (
     <section style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {notice && (
         <div
@@ -215,13 +229,26 @@ export default function AdminBhajansPage() {
 
           <div style={{ textAlign: "center", fontSize: "11px", color: "#9CA3AF" }}>— OR PASTE STREAM LINK —</div>
 
-          <input
-            type="url"
-            placeholder="Direct MP3 Audio URL (Optional if file chosen above)"
-            value={newBhajan.url}
-            onChange={(e) => setNewBhajan({ ...newBhajan, url: e.target.value })}
-            style={{ padding: "8px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
-          />
+          {/* Cleaned & Validated Audio URL Input */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <input
+              type="url"
+              placeholder="Direct MP3 URL or Google Drive link"
+              value={newBhajan.url}
+              onChange={(e) => handleAudioUrlChange(e.target.value)}
+              style={{
+                padding: "8px",
+                borderRadius: "6px",
+                border: audioWarning ? "1.5px solid #EF4444" : "1px solid #D1D5DB",
+                fontSize: "13px",
+              }}
+            />
+            {audioWarning && (
+              <span style={{ fontSize: "11px", color: "#DC2626", fontWeight: "600" }}>
+                {audioWarning}
+              </span>
+            )}
+          </div>
 
           <button
             onClick={handleAddBhajan}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { sanitizeMediaUrl, validateMediaUrl } from "@/lib/urlValidator";
 
 export default function AdminBooksPage() {
   const [books, setBooks] = useState([]);
@@ -16,6 +17,15 @@ export default function AdminBooksPage() {
     pdf_url: "",
     content: "",
   });
+
+  const [pdfWarning, setPdfWarning] = useState(null);
+
+const handlePdfUrlChange = (value) => {
+  const cleaned = sanitizeMediaUrl(value);
+  setNewBook((prev) => ({ ...prev, pdf_url: cleaned }));
+  const warning = validateMediaUrl(cleaned, "pdf");
+  setPdfWarning(warning);
+};
 
   const showToast = (msg) => {
     setNotice(msg);
@@ -218,6 +228,25 @@ export default function AdminBooksPage() {
           </div>
         ))}
       </div>
+<div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+  <input
+    type="url"
+    placeholder="Direct PDF URL or Google Drive PDF link"
+    value={newBook.pdf_url}
+    onChange={(e) => handlePdfUrlChange(e.target.value)}
+    style={{
+      padding: "8px",
+      borderRadius: "6px",
+      border: pdfWarning ? "1.5px solid #EF4444" : "1px solid #D1D5DB",
+      fontSize: "13px",
+    }}
+  />
+  {pdfWarning && (
+    <span style={{ fontSize: "11px", color: "#DC2626", fontWeight: "600" }}>
+      {pdfWarning}
+    </span>
+  )}
+</div>
     </section>
   );
 }

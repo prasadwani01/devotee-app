@@ -300,6 +300,29 @@ export default function HomePage() {
             </p>
           </div>
         </Link>
+        <Link
+  href="/books"
+  style={{
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: "14px",
+    padding: "16px 12px",
+    textDecoration: "none",
+    border: "1px solid #FDE68A",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+  }}
+>
+  <span style={{ fontSize: "28px", marginBottom: "6px" }}>📖</span>
+  <span style={{ fontSize: "13px", fontWeight: "700", color: "#1F2937" }}>
+    धार्मिक ग्रंथ
+  </span>
+  <span style={{ fontSize: "11px", color: "#B45309", marginTop: "2px" }}>
+    Books & Granth
+  </span>
+</Link>
       </section>
     </main>
   );

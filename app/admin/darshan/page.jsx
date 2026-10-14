@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { sanitizeMediaUrl, validateMediaUrl } from "@/lib/urlValidator";
 
 export default function AdminDarshanPage() {
   const [wallpapers, setWallpapers] = useState([]);
@@ -15,6 +16,15 @@ export default function AdminDarshanPage() {
     tag: "Daily Darshan",
     url: "",
   });
+
+  const [imageWarning, setImageWarning] = useState(null);
+
+const handleImageUrlChange = (value) => {
+  const cleaned = sanitizeMediaUrl(value);
+  setNewWallpaper((prev) => ({ ...prev, image_url: cleaned }));
+  const warning = validateMediaUrl(cleaned, "image");
+  setImageWarning(warning);
+};
 
   const fileInputRef = useRef(null);
 
@@ -287,6 +297,25 @@ export default function AdminDarshanPage() {
           </div>
         ))}
       </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+  <input
+    type="url"
+    placeholder="Direct Image URL or Google Drive link"
+    value={newWallpaper.image_url}
+    onChange={(e) => handleImageUrlChange(e.target.value)}
+    style={{
+      padding: "8px",
+      borderRadius: "6px",
+      border: imageWarning ? "1.5px solid #EF4444" : "1px solid #D1D5DB",
+      fontSize: "13px",
+    }}
+  />
+  {imageWarning && (
+    <span style={{ fontSize: "11px", color: "#DC2626", fontWeight: "600" }}>
+      {imageWarning}
+    </span>
+  )}
+</div>
     </section>
   );
 }
