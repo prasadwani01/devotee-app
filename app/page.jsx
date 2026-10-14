@@ -46,7 +46,9 @@ export default function HomePage() {
       if (settingsData) {
         setSettings({
           greeting: settingsData.greeting || "Jai Shri Krishna",
-          subtitle: settingsData.subtitle || "Welcome to your daily spiritual satsang & yatra companion.",
+          subtitle:
+            settingsData.subtitle ||
+            "Welcome to your daily spiritual satsang & yatra companion.",
         });
       }
 
@@ -70,7 +72,9 @@ export default function HomePage() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-      alert("To install on iOS Safari: tap the Share button below and select 'Add to Home Screen'.");
+      alert(
+        "To install on iOS Safari: tap the Share button below and select 'Add to Home Screen'."
+      );
       return;
     }
 
@@ -106,13 +110,34 @@ export default function HomePage() {
             boxShadow: "0 4px 12px rgba(245, 158, 11, 0.15)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, marginRight: "8px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              flex: 1,
+              marginRight: "8px",
+            }}
+          >
             <span style={{ fontSize: "24px" }}>📱</span>
             <div>
-              <h2 style={{ fontSize: "14px", fontWeight: "700", color: "#92400E", margin: 0 }}>
+              <h2
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "700",
+                  color: "#92400E",
+                  margin: 0,
+                }}
+              >
                 Install Devotee App
               </h2>
-              <p style={{ fontSize: "11px", color: "#B45309", margin: "2px 0 0" }}>
+              <p
+                style={{
+                  fontSize: "11px",
+                  color: "#B45309",
+                  margin: "2px 0 0",
+                }}
+              >
                 Fast 1-tap access on your phone screen
               </p>
             </div>
@@ -153,7 +178,7 @@ export default function HomePage() {
         </aside>
       )}
 
-      {/* Dynamic Header Banner (Loaded from Supabase) */}
+      {/* Dynamic Header Banner */}
       <header
         style={{
           background: "linear-gradient(135deg, #F59E0B, #D97706)",
@@ -165,17 +190,30 @@ export default function HomePage() {
         }}
       >
         <span style={{ fontSize: "28px" }}>🪔</span>
-        <h1 style={{ fontSize: "20px", fontWeight: "700", margin: "8px 0 4px" }}>
+        <h1
+          style={{
+            fontSize: "20px",
+            fontWeight: "700",
+            margin: "8px 0 4px",
+          }}
+        >
           {settings.greeting}
         </h1>
-        <p style={{ fontSize: "13px", opacity: 0.9, margin: 0, lineHeight: "1.4" }}>
+        <p
+          style={{
+            fontSize: "13px",
+            opacity: 0.9,
+            margin: 0,
+            lineHeight: "1.4",
+          }}
+        >
           {settings.subtitle}
         </p>
       </header>
 
       {/* Quick Navigation Cards */}
       <section style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {/* Card 1: Live Featured Yatra */}
+        {/* Card 1: Featured Yatra */}
         {featuredYatra && (
           <div
             style={{
@@ -186,19 +224,57 @@ export default function HomePage() {
               boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "11px", fontWeight: "700", color: "#D97706", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  color: "#D97706",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+              >
                 Upcoming Yatra
               </span>
-              <span style={{ fontSize: "11px", backgroundColor: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: "10px", fontWeight: "600" }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  backgroundColor: "#FEF3C7",
+                  color: "#B45309",
+                  padding: "2px 8px",
+                  borderRadius: "10px",
+                  fontWeight: "600",
+                }}
+              >
                 {featuredYatra.badge || "Booking Open"}
               </span>
             </div>
-            <h2 style={{ fontSize: "17px", fontWeight: "600", margin: "10px 0 6px", color: "#1F2937" }}>
+            <h2
+              style={{
+                fontSize: "17px",
+                fontWeight: "600",
+                margin: "10px 0 6px",
+                color: "#1F2937",
+              }}
+            >
               {featuredYatra.title}
             </h2>
-            <p style={{ fontSize: "13px", color: "#4B5563", margin: "0 0 14px", lineHeight: "1.4" }}>
-              {featuredYatra.duration ? `${featuredYatra.duration} • ` : ""}{featuredYatra.route || featuredYatra.date}
+            <p
+              style={{
+                fontSize: "13px",
+                color: "#4B5563",
+                margin: "0 0 14px",
+                lineHeight: "1.4",
+              }}
+            >
+              {featuredYatra.duration ? `${featuredYatra.duration} • ` : ""}
+              {featuredYatra.route || featuredYatra.date}
             </p>
             <Link
               href="/trips"
@@ -251,7 +327,14 @@ export default function HomePage() {
             🌸
           </div>
           <div>
-            <h3 style={{ fontSize: "15px", fontWeight: "600", margin: "0 0 2px", color: "#1F2937" }}>
+            <h3
+              style={{
+                fontSize: "15px",
+                fontWeight: "600",
+                margin: "0 0 2px",
+                color: "#1F2937",
+              }}
+            >
               Daily Darshan &amp; Wallpapers
             </h3>
             <p style={{ fontSize: "12px", color: "#6B7280", margin: 0 }}>
@@ -292,7 +375,14 @@ export default function HomePage() {
             🎶
           </div>
           <div>
-            <h3 style={{ fontSize: "15px", fontWeight: "600", margin: "0 0 2px", color: "#1F2937" }}>
+            <h3
+              style={{
+                fontSize: "15px",
+                fontWeight: "600",
+                margin: "0 0 2px",
+                color: "#1F2937",
+              }}
+            >
               Bhajans &amp; Kirtans
             </h3>
             <p style={{ fontSize: "12px", color: "#6B7280", margin: 0 }}>
@@ -300,29 +390,102 @@ export default function HomePage() {
             </p>
           </div>
         </Link>
+
+        {/* Card 4: Books & Granth */}
         <Link
-  href="/books"
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: "14px",
-    padding: "16px 12px",
-    textDecoration: "none",
-    border: "1px solid #FDE68A",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
-  }}
->
-  <span style={{ fontSize: "28px", marginBottom: "6px" }}>📖</span>
-  <span style={{ fontSize: "13px", fontWeight: "700", color: "#1F2937" }}>
-    धार्मिक ग्रंथ
-  </span>
-  <span style={{ fontSize: "11px", color: "#B45309", marginTop: "2px" }}>
-    Books & Granth
-  </span>
-</Link>
+          href="/books"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "14px",
+            backgroundColor: "#FFFFFF",
+            borderRadius: "14px",
+            padding: "16px",
+            border: "1px solid #E5E7EB",
+            textDecoration: "none",
+            color: "inherit",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+          }}
+        >
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              backgroundColor: "#FEF3C7",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "24px",
+              flexShrink: 0,
+            }}
+          >
+            📖
+          </div>
+          <div>
+            <h3
+              style={{
+                fontSize: "15px",
+                fontWeight: "600",
+                margin: "0 0 2px",
+                color: "#1F2937",
+              }}
+            >
+              धार्मिक ग्रंथ • Books &amp; Granth
+            </h3>
+            <p style={{ fontSize: "12px", color: "#6B7280", margin: 0 }}>
+              Read holy scriptures, chalisa &amp; stotras offline
+            </p>
+          </div>
+        </Link>
+
+        {/* Card 5: Utsav & Events */}
+        <Link
+          href="/events"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "14px",
+            backgroundColor: "#FFFFFF",
+            borderRadius: "14px",
+            padding: "16px",
+            border: "1px solid #E5E7EB",
+            textDecoration: "none",
+            color: "inherit",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+          }}
+        >
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              backgroundColor: "#FFFBEB",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "24px",
+              flexShrink: 0,
+            }}
+          >
+            📅
+          </div>
+          <div>
+            <h3
+              style={{
+                fontSize: "15px",
+                fontWeight: "600",
+                margin: "0 0 2px",
+                color: "#1F2937",
+              }}
+            >
+              उत्सव व कार्यक्रम • Utsav &amp; Events
+            </h3>
+            <p style={{ fontSize: "12px", color: "#6B7280", margin: 0 }}>
+              Upcoming festival dates, pooja &amp; satsang schedules
+            </p>
+          </div>
+        </Link>
       </section>
     </main>
   );
