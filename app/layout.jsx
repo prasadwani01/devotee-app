@@ -60,6 +60,7 @@ const navItems = [
   { label: "Yatras", href: "/trips", icon: CompassIcon },
   { label: "Bhajans", href: "/bhajans", icon: MusicIcon },
   { label: "Darshan", href: "/wallpapers", icon: ImageIcon },
+  { label: "Books", href: "/books", icon: BookIcon }, // <-- Added here
 ];
 
 function BottomNav() {
