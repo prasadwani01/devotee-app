@@ -19,6 +19,7 @@ export default function AdminLayout({ children }) {
     { label: "🚩 Yatras", href: "/admin/yatras" },
     { label: "🎶 Bhajans", href: "/admin/bhajans" },
     { label: "🌸 Darshan", href: "/admin/darshan" },
+    { label: "📖 Books", href: "/admin/books" }, // <-- Added here
     { label: "📋 Bookings", href: "/admin/bookings" },
     { label: "⚙️ Settings", href: "/admin/settings" },
   ];
